@@ -1,0 +1,47 @@
+---
+title: "Week 1"
+author: "Ihsan Fadilah - Oxford University Clinical Research Unit, Jakarta"
+date: "`r Sys.Date()`"
+output: rmdformats::robobook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+# Package dependencies
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(here)
+```
+
+```{r message=FALSE, warning=FALSE}
+# Load the data in
+firstwave_london <- read_csv(here('week-1', 'firstwave_London.csv'))
+
+# Inspect the dataframe
+# First 5 rows
+kable(head(firstwave_london, 5), booktabs = TRUE) %>%
+  kable_styling(font_size = 12)
+
+# Structure of the data
+glimpse(firstwave_london)
+```
+
+```{r}
+firstwave_london |> 
+  ggplot(aes(x = date)) +
+    geom_line(aes(y = newCasesBySpecimenDate))
+```
+
+```{r}
+firstwave_london |> 
+  ggplot(aes(x = date)) +
+    geom_col(aes(y = cumCasesBySpecimenDate))
+```
+
+```{r echo=FALSE}
+xfun::session_info()
+```
