@@ -1,0 +1,144 @@
+---
+title: "Ebola Analysis and Plotting"
+author: "Emma Davis"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(outbreaks)
+library(incidence)
+library(EpiEstim)
+```
+
+## Plotting with the `incidence` package
+
+```{r load}
+onset <- outbreaks::ebola_sim$linelist$date_of_onset
+i <- incidence(onset)
+i
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r simpleplot, echo=FALSE}
+plot(i)
+```
+
+```{r color, echo=FALSE}
+plot(i, color = "forestgreen")
+```
+
+```{r transparency, echo=FALSE}
+plot(i, alpha=0.8, color="darkred")
+```
+
+```{r axislabels, echo=FALSE}
+plot(i, xlab="Date case reported", color="gold", alpha=0.5)
+```
+
+```{r breaks, echo=FALSE}
+plot(i, xlab="Date case reported", n_breaks=10)
+```
+
+```{r weekly, echo=FALSE}
+i_week <- incidence(onset, interval = 7)
+plot(i_week)
+plot(i_week, labels_week = FALSE)
+```
+
+```{r fit, echo=FALSE}
+my_fit <- fit(i)
+plot(i, fit = my_fit)
+```
+
+
+
+
+```{r splitfit, echo=FALSE}
+split_fit <- fit(i, split = as.Date("2014-12-15"))
+plot(i, fit = split_fit)
+```
+The R^2 statistic is used to optimise the average fit of the before and after models
+
+```{r optimfit, echo=FALSE}
+optim_split <- fit_optim_split(i)
+optim_split
+optim_split$split
+```
+
+```{r plotoptim, echo=FALSE}
+optim_fit <- optim_split$fit
+plot(i, fit = optim_fit)
+```
+
+```{r neatplot, echo=FALSE}
+plot(i, fit = optim_fit, color= "blue", xlab = "Date case reported")
+```
+
+
+## Plotting with the `EpiEstim` package
+
+Reference: WHO Ebola Response Team: Ebola Virus Disease in West Africa - the first 9 months of the epidemic and forward projections. N Engl J Med.
+
+```{r serial}
+s_interval <- make_config(
+  mean_si = 15.3,
+  std_si = 9.3
+)
+```
+
+
+
+```{r Re}
+my_R <- estimate_R(i, method = "parametric_si", config = s_interval)
+plot(my_R)
+```
+
+
+
+```{r plots}
+plot(my_R, what = "R", legend = TRUE, 
+                 options_R = list(col = "red", xlab = "Date"))
+```
+
+## Examples using the `ggplot2` package
+
+```{r tibble}
+sex <- outbreaks::ebola_sim$linelist$gender
+cases <- tibble(onset = onset, sex = sex)
+cases
+```
+
+
+
+```{r histogram}
+g <- cases %>% ggplot(aes(x = onset, fill = sex)) + geom_histogram()
+g
+```
+
+
+
+```{r labels}
+g <- g + labs(title = "Histogram of onset dates", x = "Date")
+g
+```
+
+
+
+```{r color}
+g <- g + scale_fill_manual(values = c("skyblue","darkgreen")) + theme_minimal(base_size = 16)
+g
+```
+
+
+
+
+```{r legend}
+g <- g + scale_fill_manual(values = c("skyblue","darkgreen"), labels = c("female", "male"))
+g
+```

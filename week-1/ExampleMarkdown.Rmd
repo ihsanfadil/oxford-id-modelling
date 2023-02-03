@@ -1,0 +1,96 @@
+---
+title: "Using R Markdown and Tidyverse"
+author: "Emma Davis"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. The below code chunk summarises the built-in dataset `cars` and reformats it as a tibble, which is the main format we will be using. The `<-` symbol is used to assign a new value to an object.
+
+```{r cars}
+summary(cars)
+cars <- as_tibble(cars)
+```
+
+## Using Tidyverse
+
+The following code chunks work through how to use some of the key functions in `tidyverse`. We use the pipe operator `%>%` to input data into whatever function we are using and any details about how we want to apply the function are put into the round brackets immediately after the name of the function.
+
+#### Creating new variables
+
+You can use `mutate` to create new variables as well as modify and remove existing variables.
+
+```{r mutate}
+cars %>% mutate(t = dist / speed)
+```
+
+### Selecting columns
+
+```{r select}
+cars %>% select(speed)
+```
+
+### Filtering data
+
+You can consider all data where a particular variable, e.g. speed, is less than or greater than a chosen value:
+
+```{r filter1}
+cars %>% filter(speed > 15)
+```
+
+You can also filter data to only consider where the variable is exactly equal to a chosen value. As the `=` sign is used to set two things equal to each other, we use `==` to ask R to identify whether or not two things are already equal:
+
+```{r filter2}
+cars %>% filter(speed == 15)
+```
+
+### Summarising data
+
+You can use `summarise` to calculate summary statistics for your data, including `mean`, `min`, `max` and `sd` (standard deviation):
+
+```{r summarise}
+cars %>% summarise(sd(speed))
+```
+
+### Ordering data
+
+The function `arrange` will sort your data from least to greatest by whichever variable you specify. The `cars` dataset is originally ordered by speed, but you might like to order it by distance instead: 
+
+```{r arrange}
+cars %>% arrange(dist)
+```
+
+### Renaming variables
+
+You can also rename your variables / columns, for example renaming speed as velocity:
+
+```{r rename}
+cars %>% rename(velocity = speed)
+```
+
+### Using the pipe operator to combine function
+
+The pipe operator can also be used to apply multiple functions at once. For example, you may want to find out the maximum distance for a speed of less than 20. First you want to filter the data down to only entries where speed is less than 20, then we want to use `summarise` to find the maximum distance:
+
+```{r combinations}
+cars %>% filter(speed<20) %>% summarise(max(dist))
+```
+
+#### Including Plots
+
+You can also embed plots, for example:
+
+```{r plotting, echo=FALSE}
+cars %>% ggplot(aes(x=speed,y=dist)) + geom_point()
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

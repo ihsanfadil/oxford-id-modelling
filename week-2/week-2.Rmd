@@ -1,0 +1,87 @@
+---
+title: "Week 2"
+author: "Ihsan Fadilah - Oxford University Clinical Research Unit, Jakarta"
+date: "`r Sys.Date()`"
+output: rmdformats::robobook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+# Package dependencies
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(here)
+library(incidence)
+library(EpiEstim)
+```
+
+```{r message=FALSE, warning=FALSE}
+# Load the data in
+case_data <- read_csv(here('week-1', 'firstwave_London.csv')) |> 
+  map_df(rev)
+```
+
+## Preprocess the data
+
+```{r incidence}
+i <- case_data |> 
+  pull(date) |> 
+  incidence()
+
+i$counts <- case_data |> 
+  select(newCasesBySpecimenDate) |> 
+  as.matrix()
+
+i$n <- case_data |> 
+  select(newCasesBySpecimenDate) |> 
+  sum()
+```
+
+```{r}
+plot(i)
+```
+
+```{r}
+i_early <- i[1:20]
+i_early
+plot(i_early)
+```
+
+```{r}
+i_mid <- i |> subset(from = as.Date('2020-02-25'), to = as.Date('2020-03-10'))
+i_mid
+plot(i_mid)
+```
+
+## Estimate the growth rate and doubling time
+```{r}
+my_fit <- fit(i)
+my_fit
+```
+
+```{r}
+split_fit <- fit(i, split = as.Date('2020-03-01'))
+split_fit
+```
+
+# Estimate the basic reproduction number
+```{r}
+s_interval <- make_config(
+  mean_si = 12.0,
+  std_si = 5.2
+) 
+
+my_r <- estimate_R(i, method = 'parametric_si', config = s_interval)
+plot(my_r)
+my_r$R
+```
+
+
+
+```{r echo=FALSE}
+xfun::session_info()
+```

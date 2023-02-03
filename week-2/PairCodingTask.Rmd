@@ -1,0 +1,183 @@
+---
+title: "Week 2 Pair Coding Tasks"
+author: "Emma Davis"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(incidence)
+library(EpiEstim)
+```
+
+## The Data
+
+First we import the data and assign it to an object, which we call `case_data`. I'm using `readRDS()` rather than `read_csv()` because the data in this instance is saved as an RData file (extension .RDS) containing only a vector of dates.
+
+```{r import, echo=FALSE}
+case_data <- readRDS('casedates_London.RDS')
+```
+
+## Using the `incidence` package
+
+```{r incidence}
+i <- case_data %>% incidence()
+i
+```
+
+We can then look at our data using the `plot()` function.
+
+```{r plot}
+plot(i) +
+  scale_x_date(date_labels = '%Y')
+```
+
+We can filter by date using two different methods: 1. Using square brackets and numerical index, e.g. `i[1:20]` will select the first twenty dates 2. Using specific date ranges, e.g. `subset(i, from = as.Date("2020-02-25"))` will select all dates after the 25th Feb 2020. We can also use both `to =` and `from =` to pick upper and lower bounds.
+
+#### Task 1: Filtering data
+
+-   Create a new incidence object called `firstwave` by filtering to the first four months of the data (up to "2020-06-03").
+-   Create another incidence object called `secondwave` by choosing a suitable start and end date (hint: have a look at your incidence plot for the entire range of dates).
+
+```{r Task1}
+firstwave <- subset(i, to = '2020-06-03')
+firstwave
+
+secondwave <- subset(i, from = '2020-08-03', to = '2021-05-03')
+secondwave
+```
+
+## Estimating the growth rate and doubling time
+
+We can estimate growth rates and doubling times using the `fit()` function (assuming an exponential growth/decline model), which also gives us the 95% confidence intervals.
+
+#### Task 2: Fitting a model
+
+-   Estimate the growth rate and doubling time for the first half of your `firstwave` object by fitting an exponential growth model
+-   Estimate the growth rate and doubling time for the first half of your `secondwave` object by fitting an exponential growth model
+-   Use `plot()` to visually assess how good your model is for both cases
+
+```{r Task2}
+# First wave
+half_firstwave <- subset(firstwave, to = '2020-04-03') # Subset the first half
+fit_firstwave <- fit(half_firstwave) # Fit the first half
+fit_firstwave # See the fitted growth rate and doubling time
+pred_firstwave <- fit_firstwave$info$pred # Extract predictions with uncertainty
+
+# Overlay predictions with incidence data
+plot(half_firstwave) +
+  geom_line(data = pred_firstwave, aes(x = dates, y = fit)) +
+  geom_line(data = pred_firstwave, aes(x = dates, y = lwr),
+            linetype = 'dashed') +
+  geom_line(data = pred_firstwave, aes(x = dates, y = upr),
+            linetype = 'dashed') +
+  scale_x_date(date_labels = '%b-%y')
+
+# Second wave
+half_secondtwave <- subset(secondwave, to = '2020-12-30') # Subset the 1st half
+fit_secondwave <- fit(half_secondtwave) # Fit the first half
+fit_secondwave # See the fitted growth rate and doubling time
+pred_secondwave <- fit_secondwave$info$pred # Extract predictions w/uncertainty
+
+# Overlay predictions with incidence data
+plot(half_secondtwave) +
+  geom_line(data = pred_secondwave, aes(x = dates, y = fit)) +
+  geom_line(data = pred_secondwave, aes(x = dates, y = lwr),
+            linetype = 'dashed') +
+  geom_line(data = pred_secondwave, aes(x = dates, y = upr),
+            linetype = 'dashed') +
+  scale_x_date(date_labels = '%b-%y')
+```
+
+As well as filtering our dataset, we can also use the `split = as.Date("...")` argument to split the dataset into "before" and "after" and get estimates of the growth rate and doubling time for both periods. There's also the function `fit_optim_split()`, which will pick the optimal split date for the model.
+
+#### Task 3: Fitting a split model
+
+-   Choose a date you think might be appropriate and use `fit()` and the `split =` argument to get estimates of the growth rate for before and after your chosen date.
+-   Use the `fit_optim_split()` function to fit the model and find the optimal date and the growth rates for before and after. How close is the optimal date to your guess?
+
+```{r Task3}
+# Let's do it for the second wave!
+# Split argument
+fit_secondwave_split <- fit(secondwave, split = '2020-12-30')
+fit_secondwave_split
+pred_secondwave_split_before <- fit_secondwave_split$before$info$pred
+pred_secondwave_split_after <- fit_secondwave_split$after$info$pred
+
+plot(secondwave) +
+  geom_line(data = pred_secondwave_split_before,
+            aes(x = dates, y = fit), colour = 'black') +
+  geom_line(data = pred_secondwave_split_before,
+            aes(x = dates, y = lwr), linetype = 'dashed', colour = 'black') +
+  geom_line(data = pred_secondwave_split_before,
+            aes(x = dates, y = upr), linetype = 'dashed', colour = 'black') +
+  geom_line(data = pred_secondwave_split_after,
+            aes(x = dates, y = fit), colour = 'black') +
+  geom_line(data = pred_secondwave_split_after,
+            aes(x = dates, y = lwr), linetype = 'dashed', colour = 'black') +
+  geom_line(data = pred_secondwave_split_after,
+            aes(x = dates, y = upr), linetype = 'dashed', colour = 'black') +
+  scale_x_date(date_labels = '%b-%y')
+  
+# Optimal split (beware of overfitting)
+fit_secondwave_optim_split <- fit_optim_split(secondwave)
+optim_date <- fit_secondwave_optim_split$split
+
+fit_secondwave_split_opsplit <- fit(secondwave, split = optim_date)
+fit_secondwave_split_opsplit
+fit_2wave_split_opsplit_before <- fit_secondwave_split_opsplit$before$info$pred
+fit_2wave_split_opsplit_after <- fit_secondwave_split_opsplit$after$info$pred
+
+plot(secondwave) +
+  geom_line(data = fit_2wave_split_opsplit_before,
+            aes(x = dates, y = fit), colour = 'black') +
+  geom_line(data = fit_2wave_split_opsplit_before,
+            aes(x = dates, y = lwr), linetype = 'dashed', colour = 'black') +
+  geom_line(data = fit_2wave_split_opsplit_before,
+            aes(x = dates, y = upr), linetype = 'dashed', colour = 'black') +
+  geom_line(data = fit_2wave_split_opsplit_after,
+            aes(x = dates, y = fit), colour = 'black') +
+  geom_line(data = fit_2wave_split_opsplit_after,
+            aes(x = dates, y = lwr), linetype = 'dashed', colour = 'black') +
+  geom_line(data = fit_2wave_split_opsplit_after,
+            aes(x = dates, y = upr), linetype = 'dashed', colour = 'black') +
+  scale_x_date(date_labels = '%b-%y')
+```
+
+## Using `EpiEstim` to estimate the effective R number
+
+To estimate the R number we need to have some knowledge of the distribution of either the serial interval (onset to onset) or the generation interval (infection to infection). The `EpiEstim` package has a function `estimate_R()` that uses the serial interval and incidence data to estimate the real-time value of the effective R number.
+
+First we need to configure the serial interval distribution settings for this calculation, using the `make_config()` function, by providing a mean and a standard deviation for the serial interval.
+
+```{r serial}
+s_interval <- make_config(
+  mean_si = 12.0,
+  std_si = 5.2
+)
+```
+
+Next, we use this as an input in the function `estimate_R()`.
+
+#### Example:
+
+```{r Re}
+my_R <- estimate_R(i, method = "parametric_si", config = s_interval)
+```
+
+#### Task 4: Estimating R
+
+-   Estimate R for your `firstwave` and `secondwave` incidence objects
+-   Which date ranges have R greater than 1?
+-   Which date ranges have R less than 1?
+-   What do you think might have caused these changes in R? Social restrictions
+
+```{r Task4}
+r_firstwave <- firstwave |> 
+  estimate_R(method = 'parametric_si', config = s_interval)
+
+r_secondwave <- secondwave |> 
+  estimate_R(method = 'parametric_si', config = s_interval)
+```
